@@ -56,6 +56,7 @@ const en = {
       cachingEntries: 'Caching Entries...',
       longerLoading: 'This might take several minutes',
       noEntries: 'No Entries',
+      unpublishedEntries: 'Unpublished Entries',
     },
     groups: {
       other: 'Other',

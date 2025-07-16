@@ -4,6 +4,7 @@ import ImmutablePropTypes from 'react-immutable-proptypes';
 import styled from '@emotion/styled';
 import { Waypoint } from 'react-waypoint';
 import { Map, List } from 'immutable';
+import { colors } from 'decap-cms-ui-default';
 
 import { selectFields, selectInferredField } from '../../../reducers/collections';
 import { filterNestedEntries } from './EntriesCollection';
@@ -18,6 +19,14 @@ const CardsGrid = styled.ul`
   margin-bottom: 16px;
 `;
 
+const UnpublishedEntriesHeader = styled.p`
+  font-size: 13px;
+  font-weight: 500;
+  color: ${colors.text};
+  text-transform: uppercase;
+  margin-bottom: 6px;
+`;
+
 class EntryListing extends React.Component {
   static propTypes = {
     collections: ImmutablePropTypes.iterable.isRequired,
@@ -29,6 +38,7 @@ class EntryListing extends React.Component {
     getUnpublishedEntries: PropTypes.func.isRequired,
     getWorkflowStatus: PropTypes.func.isRequired,
     filterTerm: PropTypes.string,
+    t: PropTypes.func.isRequired,
   };
 
   componentDidMount() {
@@ -63,13 +73,13 @@ class EntryListing extends React.Component {
     const collectionName = Map.isMap(collections) ? collections.get('name') : null;
 
     if (!collectionName) {
-      return entries;
+      return { publishedEntries: entries };
     }
 
     const unpublishedEntries = this.props.getUnpublishedEntries(collectionName);
 
     if (!unpublishedEntries || unpublishedEntries.length === 0) {
-      return entries;
+      return { publishedEntries: entries };
     }
 
     let unpublishedList = List(unpublishedEntries.map(entry => entry));
@@ -91,59 +101,93 @@ class EntryListing extends React.Component {
       publishedSlugs.has(entry.get('slug')),
     );
 
-    return entries.concat(uniqueUnpublished);
+    return {
+      publishedEntries: entries,
+      unpublishedEntries: uniqueUnpublished,
+    };
   };
 
   renderCardsForSingleCollection = () => {
+    const { publishedEntries, unpublishedEntries } = this.getAllEntries();
+
+    return (
+      <div>
+        {this.renderCardsForEntries(publishedEntries)}
+        {unpublishedEntries && unpublishedEntries.size > 0 && (
+          <>
+            <UnpublishedEntriesHeader>
+              {this.props.t('collection.entries.unpublishedEntries')}
+            </UnpublishedEntriesHeader>
+            {this.renderCardsForEntries(unpublishedEntries)}
+          </>
+        )}
+      </div>
+    );
+  };
+
+  renderCardsForEntries = entries => {
     const { collections, viewStyle } = this.props;
-    const allEntries = this.getAllEntries();
     const inferredFields = this.inferFields(collections);
     const entryCardProps = { collection: collections, inferredFields, viewStyle };
 
-    return allEntries.map((entry, idx) => {
-      const workflowStatus = this.props.getWorkflowStatus(
-        collections.get('name'),
-        entry.get('slug'),
-      );
+    return (
+      <CardsGrid>
+        {entries.map((entry, idx) => {
+          const workflowStatus = this.props.getWorkflowStatus(
+            collections.get('name'),
+            entry.get('slug'),
+          );
 
-      return (
-        <EntryCard {...entryCardProps} entry={entry} workflowStatus={workflowStatus} key={idx} />
-      );
-    });
+          return (
+            <EntryCard
+              {...entryCardProps}
+              entry={entry}
+              workflowStatus={workflowStatus}
+              key={idx}
+            />
+          );
+        })}
+      </CardsGrid>
+    );
   };
 
   renderCardsForMultipleCollections = () => {
     const { collections, entries } = this.props;
     const isSingleCollectionInList = collections.size === 1;
-    return entries.map((entry, idx) => {
-      const collectionName = entry.get('collection');
-      const collection = collections.find(coll => coll.get('name') === collectionName);
-      const collectionLabel = !isSingleCollectionInList && collection.get('label');
-      const inferredFields = this.inferFields(collection);
-      const workflowStatus = this.props.getWorkflowStatus(collectionName, entry.get('slug'));
-      const entryCardProps = {
-        collection,
-        entry,
-        inferredFields,
-        collectionLabel,
-        workflowStatus,
-      };
-      return <EntryCard {...entryCardProps} key={idx} />;
-    });
+
+    return (
+      <div>
+        <CardsGrid>
+          {entries.map((entry, idx) => {
+            const collectionName = entry.get('collection');
+            const collection = collections.find(coll => coll.get('name') === collectionName);
+            const collectionLabel = !isSingleCollectionInList && collection.get('label');
+            const inferredFields = this.inferFields(collection);
+            const workflowStatus = this.props.getWorkflowStatus(collectionName, entry.get('slug'));
+            const entryCardProps = {
+              collection,
+              entry,
+              inferredFields,
+              collectionLabel,
+              workflowStatus,
+            };
+            return <EntryCard {...entryCardProps} key={idx} />;
+          })}
+        </CardsGrid>
+      </div>
+    );
   };
 
   render() {
     const { collections, page } = this.props;
 
     return (
-      <div>
-        <CardsGrid>
-          {Map.isMap(collections)
-            ? this.renderCardsForSingleCollection()
-            : this.renderCardsForMultipleCollections()}
-          {this.hasMore() && <Waypoint key={page} onEnter={this.handleLoadMore} />}
-        </CardsGrid>
-      </div>
+      <>
+        {Map.isMap(collections)
+          ? this.renderCardsForSingleCollection()
+          : this.renderCardsForMultipleCollections()}
+        {this.hasMore() && <Waypoint key={page} onEnter={this.handleLoadMore} />}
+      </>
     );
   }
 }
