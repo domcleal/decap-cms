@@ -143,6 +143,17 @@ describe('stringTemplate', () => {
       ).toBe('BACKENDSLUG-title-none');
     });
 
+    it('return apply filter for join', () => {
+      expect(
+        compileStringTemplate(
+          "{{slug | upper}} - {{missing | join(',')}} - {{single | join(',')}} - {{multiple | join(', ')}}",
+          date,
+          'backendSlug',
+          fromJS({ slug: 'entrySlug', missing: null, single: ["one"], multiple: ["apple", "orange"] }),
+        ),
+      ).toBe('BACKENDSLUG - undefined - one - apple, orange');
+    });
+
     it('return apply filter for ternary', () => {
       expect(
         compileStringTemplate(

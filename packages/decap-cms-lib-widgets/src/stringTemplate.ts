@@ -20,6 +20,10 @@ const filters = [
     transform: (str: string, match: RegExpMatchArray) => (str ? str : match[1]),
   },
   {
+    pattern: /^join\('(.*)'\)$/,
+    transform: (str: string, match: RegExpMatchArray) => (str?.join(match[1])),
+  },
+  {
     pattern: /^ternary\('(.*)',\s*'(.*)'\)$/,
     transform: (str: string, match: RegExpMatchArray) => (str ? match[1] : match[2]),
   },
